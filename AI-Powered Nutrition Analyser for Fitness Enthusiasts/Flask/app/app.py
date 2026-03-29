@@ -26,6 +26,16 @@ except ImportError:
 app = Flask(__name__, template_folder="../templates", static_folder='../static')
 app.secret_key = "replace-with-random-secret"  # change for production
 
+# Email configuration for password reset (use a real SMTP account and app password)
+app.config.update({
+    'MAIL_SERVER': 'smtp.gmail.com',
+    'MAIL_PORT': 587,
+    'MAIL_USE_TLS': True,
+    'MAIL_USERNAME': 'velan.mca2024@adhiyamaan.in',
+    'MAIL_PASSWORD': '',  # set actual password or app-specific password here
+    'MAIL_DEFAULT_SENDER': 'velan.mca2024@adhiyamaan.in'
+})
+
 USERS_FILE = os.path.join(os.path.dirname(__file__), 'users.json')
 
 
@@ -45,6 +55,46 @@ def current_user():
     email = session.get('email')
     users = load_users()
     return users.get(email)
+
+
+def send_reset_email(to_email, otp):
+    from email.message import EmailMessage
+    import smtplib
+
+    sender = app.config['MAIL_DEFAULT_SENDER']
+    msg = EmailMessage()
+    msg['Subject'] = 'Nutrition Analyzer Password Reset OTP'
+    msg['From'] = sender
+    msg['To'] = to_email
+    
+    msg_body = f"""
+Hello,
+
+You requested a password reset for Nutrition Analyzer.
+
+Your One-Time Password (OTP): {otp}
+
+- OTP expires in 10 minutes.
+- This is an auto-generated email from velan.mca2024@adhiyamaan.in.
+- If you did not request this, please ignore this email.
+
+Use this OTP on the password reset page to continue.
+
+Thanks,
+Nutrition Analyzer Support
+"""
+
+    msg.set_content(msg_body)
+
+    try:
+        with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
+            server.ehlo()
+            server.starttls()
+            server.login(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD'])
+            server.send_message(msg)
+    except Exception as e:
+        app.logger.error(f"Failed to send reset email: {e}")
+        raise
 
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'nutrition.h5')
@@ -86,90 +136,94 @@ def forgot_password():
             return render_template('forgot_password.html', user=current_user())
 
         users = load_users()
-        if email in users and 'security_question' in users[email]:
-            # Store email in session for security question verification
+        if email in users:
+            otp = "{0:06d}".format(secrets.randbelow(1000000))
             session['reset_email'] = email
-            session['reset_step'] = 'security_question'
-            flash('Please answer your security question to continue.', 'info')
-            return redirect(url_for('verify_security_question'))
+            session['reset_otp'] = otp
+            session['reset_otp_expires'] = (datetime.datetime.now() + datetime.timedelta(minutes=10)).isoformat()
+
+            try:
+                send_reset_email(email, otp)
+                flash('OTP has been sent to your email. Check spam/junk folder.', 'success')
+                return redirect(url_for('verify_otp'))
+            except Exception:
+                flash('Unable to send OTP email, please try again later.', 'error')
+                return redirect(url_for('forgot_password'))
         else:
-            # Don't reveal if email exists or not for security reasons
-            flash('If an account with that email exists, please check that security questions are set up.', 'info')
+            flash('If an account with that email exists, an OTP has been sent.', 'info')
             return redirect(url_for('login'))
-    
-    return render_template('forgot_password.html', user=current_user())
 
-
-@app.route('/verify-security-question', methods=['GET', 'POST'])
-def verify_security_question():
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
     email = session.get('reset_email')
-    if not email or session.get('reset_step') != 'security_question':
-        flash('Invalid reset session. Please start over.', 'error')
+    otp = session.get('reset_otp')
+    otp_expires = session.get('reset_otp_expires')
+
+    if not email or not otp or not otp_expires:
+        flash('No active password reset request. Please start again.', 'error')
         return redirect(url_for('forgot_password'))
-    
-    users = load_users()
-    if email not in users:
-        flash('User not found.', 'error')
-        return redirect(url_for('forgot_password'))
-    
-    user = users[email]
-    if 'security_question' not in user:
-        flash('Security question not set up for this account.', 'error')
-        return redirect(url_for('forgot_password'))
-    
+
     if request.method == 'POST':
-        answer = request.form.get('security_answer', '').strip().lower()
-        correct_answer = user.get('security_answer', '').strip().lower()
-        
-        if answer == correct_answer:
-            # Generate reset token and proceed to password reset
-            reset_token = secrets.token_urlsafe(32)
-            session['reset_token'] = reset_token
-            session['reset_expires'] = datetime.datetime.now() + datetime.timedelta(minutes=15)
-            session['reset_step'] = 'password_reset'
-            
-            flash('Security question verified. You can now reset your password.', 'success')
-            return redirect(url_for('reset_password', token=reset_token))
-        else:
-            flash('Incorrect answer to security question.', 'error')
-            return render_template('verify_security_question.html', 
-                                 security_question=user['security_question'], 
-                                 user=current_user())
-    
-    return render_template('verify_security_question.html', 
-                         security_question=user['security_question'], 
-                         user=current_user())
-    
+        entered_otp = request.form.get('otp', '').strip()
+        if entered_otp != otp:
+            flash('Incorrect OTP. Please try again.', 'error')
+            return render_template('verify_otp.html', user=current_user())
+
+        if datetime.datetime.now() > datetime.datetime.fromisoformat(otp_expires):
+            flash('OTP has expired. Please request a new one.', 'error')
+            return redirect(url_for('forgot_password'))
+
+        reset_token = secrets.token_urlsafe(32)
+        session['reset_token'] = reset_token
+        session['reset_expires'] = (datetime.datetime.now() + datetime.timedelta(minutes=15)).isoformat()
+
+        session.pop('reset_otp', None)
+        session.pop('reset_otp_expires', None)
+
+        flash('OTP verified. Please set a new password now.', 'success')
+        return redirect(url_for('reset_password', token=reset_token))
+
+    return render_template('verify_otp.html', user=current_user())
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if session.get('reset_token') != token or not session.get('reset_expires'):
+        flash('Invalid or expired reset token.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if datetime.datetime.now() > datetime.datetime.fromisoformat(session['reset_expires']):
+        flash('Reset token has expired. Please start again.', 'error')
+        return redirect(url_for('forgot_password'))
+
     if request.method == 'POST':
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
-        
+
         if not password or len(password) < 6:
             flash('Password must be at least 6 characters long.', 'error')
             return render_template('reset_password.html', token=token)
-        
+
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
             return render_template('reset_password.html', token=token)
-        
-        # Update password
+
         users = load_users()
         email = session.get('reset_email')
         if email and email in users:
             users[email]['password'] = generate_password_hash(password)
             save_users(users)
-            
-            # Clear reset session
+
             session.pop('reset_token', None)
             session.pop('reset_email', None)
             session.pop('reset_expires', None)
-            
+
             flash('Password has been reset successfully. You can now log in.', 'success')
             return redirect(url_for('login'))
         else:
             flash('User not found.', 'error')
             return redirect(url_for('forgot_password'))
-    
+
     return render_template('reset_password.html', token=token)
 
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - Nutrition Analyzer</title>
+    <title>Verify OTP - Nutrition Analyzer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
@@ -34,17 +34,16 @@
     {% endwith %}
 
     <main id="home-main">
-        <h3>Forgot Password</h3>
-        <p>Enter your email address and we will send a 6-digit OTP to your inbox from velan.mca2024@adhiyamaan.in.</p>
-        <p>OTP expires in 10 minutes and is required to proceed to password reset.</p>
-        <form action="/forgot-password" method="post">
+        <h3>Verify OTP</h3>
+        <p>Enter the 6-digit OTP sent from velan.mca2024@adhiyamaan.in to your account email.</p>
+        <form action="/verify-otp" method="post">
             <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
+                <label for="otp">OTP:</label>
+                <input type="text" id="otp" name="otp" maxlength="6" minlength="6" required>
             </div>
-            <button type="submit">Continue to Reset</button>
+            <button type="submit">Verify OTP</button>
         </form>
-        <p><a href="/login">Back to Login</a></p>
+        <p><a href="/forgot-password">Resend OTP</a></p>
     </main>
 </body>
 </html>
