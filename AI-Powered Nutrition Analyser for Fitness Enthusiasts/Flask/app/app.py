@@ -32,9 +32,9 @@ app.config.update({
     'MAIL_SERVER': 'smtp.gmail.com',
     'MAIL_PORT': 587,
     'MAIL_USE_TLS': True,
-    'MAIL_USERNAME': 'velan.mca2024@adhiyamaan.in',
-    'MAIL_PASSWORD': '',  # set actual password or app-specific password here
-    'MAIL_DEFAULT_SENDER': 'velan.mca2024@adhiyamaan.in'
+    'MAIL_USERNAME': 'velanvela360@gmail.com',
+    'MAIL_PASSWORD': 'mbwphcwslnfjrawq',  # Gmail app password
+    'MAIL_DEFAULT_SENDER': 'velanvela360@gmail.com'
 })
 
 USERS_FILE = os.path.join(os.path.dirname(__file__), 'users.json')
