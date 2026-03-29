@@ -4,6 +4,7 @@ import datetime
 import uuid
 import secrets
 import hashlib
+import sqlite3
 from collections import defaultdict
 from io import BytesIO
 
@@ -37,6 +38,83 @@ app.config.update({
 })
 
 USERS_FILE = os.path.join(os.path.dirname(__file__), 'users.json')
+OTP_DB_FILE = os.path.join(os.path.dirname(__file__), 'otp_store.db')
+
+
+def init_otp_db():
+    conn = sqlite3.connect(OTP_DB_FILE)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS otp_requests (
+            email TEXT PRIMARY KEY,
+            otp TEXT,
+            expires_at TEXT,
+            attempts INTEGER DEFAULT 0,
+            lockout_until TEXT,
+            channel TEXT,
+            created_at TEXT,
+            verified INTEGER DEFAULT 0
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+def get_otp_entry(email):
+    conn = sqlite3.connect(OTP_DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT email, otp, expires_at, attempts, lockout_until, channel, created_at, verified FROM otp_requests WHERE email=?', (email,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        'email': row[0],
+        'otp': row[1],
+        'expires_at': row[2],
+        'attempts': row[3],
+        'lockout_until': row[4],
+        'channel': row[5],
+        'created_at': row[6],
+        'verified': bool(row[7])
+    }
+
+
+def save_otp_entry(email, otp, expires_at, channel='email'):
+    conn = sqlite3.connect(OTP_DB_FILE)
+    conn.execute('''
+        INSERT OR REPLACE INTO otp_requests (email, otp, expires_at, attempts, lockout_until, channel, created_at, verified)
+        VALUES (?, ?, ?, 0, NULL, ?, ?, 0)
+    ''', (email, otp, expires_at.isoformat(), channel, datetime.datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+
+def increment_otp_attempts(email):
+    entry = get_otp_entry(email)
+    if not entry:
+        return
+    attempts = entry['attempts'] + 1
+    lockout_until = None
+    if attempts >= 5:
+        lockout_until = (datetime.datetime.now() + datetime.timedelta(minutes=15)).isoformat()
+    conn = sqlite3.connect(OTP_DB_FILE)
+    conn.execute('UPDATE otp_requests SET attempts = ?, lockout_until = ? WHERE email = ?', (attempts, lockout_until, email))
+    conn.commit()
+    conn.close()
+
+
+def mark_otp_verified(email):
+    conn = sqlite3.connect(OTP_DB_FILE)
+    conn.execute('UPDATE otp_requests SET verified = 1 WHERE email = ?', (email,))
+    conn.commit()
+    conn.close()
+
+
+def delete_otp_entry(email):
+    conn = sqlite3.connect(OTP_DB_FILE)
+    conn.execute('DELETE FROM otp_requests WHERE email = ?', (email,))
+    conn.commit()
+    conn.close()
 
 
 def load_users():
@@ -57,6 +135,10 @@ def current_user():
     return users.get(email)
 
 
+# initialize OTP store database
+init_otp_db()
+
+
 def send_reset_email(to_email, otp):
     from email.message import EmailMessage
     import smtplib
@@ -66,8 +148,8 @@ def send_reset_email(to_email, otp):
     msg['Subject'] = 'Nutrition Analyzer Password Reset OTP'
     msg['From'] = sender
     msg['To'] = to_email
-    
-    msg_body = f"""
+
+    plain_body = f"""
 Hello,
 
 You requested a password reset for Nutrition Analyzer.
@@ -75,7 +157,7 @@ You requested a password reset for Nutrition Analyzer.
 Your One-Time Password (OTP): {otp}
 
 - OTP expires in 10 minutes.
-- This is an auto-generated email from velan.mca2024@adhiyamaan.in.
+- This is an auto-generated email from {sender}.
 - If you did not request this, please ignore this email.
 
 Use this OTP on the password reset page to continue.
@@ -84,7 +166,10 @@ Thanks,
 Nutrition Analyzer Support
 """
 
-    msg.set_content(msg_body)
+    html_body = render_template('email_otp.html', otp=otp, expires_minutes=10, sender=sender)
+
+    msg.set_content(plain_body)
+    msg.add_alternative(html_body, subtype='html')
 
     try:
         with smtplib.SMTP(app.config['MAIL_SERVER'], app.config['MAIL_PORT']) as server:
@@ -95,6 +180,25 @@ Nutrition Analyzer Support
     except Exception as e:
         app.logger.error(f"Failed to send reset email: {e}")
         raise
+
+
+def send_sms_otp(phone_number, otp):
+    # Twilio-based SMS fallback. Configure env vars: TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM
+    try:
+        from twilio.rest import Client
+    except ImportError:
+        raise RuntimeError('Twilio library not installed (pip install twilio)')
+
+    account_sid = os.getenv('TWILIO_SID')
+    auth_token = os.getenv('TWILIO_TOKEN')
+    from_phone = os.getenv('TWILIO_FROM')
+
+    if not account_sid or not auth_token or not from_phone:
+        raise RuntimeError('Twilio configuration missing in environment variables')
+
+    client = Client(account_sid, auth_token)
+    message_body = f"Your Nutrition Analyzer OTP is {otp} (valid 10 minutes)."
+    client.messages.create(body=message_body, from_=from_phone, to=phone_number)
 
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'nutrition.h5')
@@ -130,58 +234,94 @@ def login():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
+        channel = request.form.get('channel', 'email')
 
         if not email:
             flash('Please enter your email address.', 'error')
             return render_template('forgot_password.html', user=current_user())
 
         users = load_users()
-        if email in users:
-            otp = "{0:06d}".format(secrets.randbelow(1000000))
-            session['reset_email'] = email
-            session['reset_otp'] = otp
-            session['reset_otp_expires'] = (datetime.datetime.now() + datetime.timedelta(minutes=10)).isoformat()
-
-            try:
-                send_reset_email(email, otp)
-                flash('OTP has been sent to your email. Check spam/junk folder.', 'success')
-                return redirect(url_for('verify_otp'))
-            except Exception:
-                flash('Unable to send OTP email, please try again later.', 'error')
-                return redirect(url_for('forgot_password'))
-        else:
+        if email not in users:
             flash('If an account with that email exists, an OTP has been sent.', 'info')
             return redirect(url_for('login'))
+
+        user = users[email]
+        otp = "{0:06d}".format(secrets.randbelow(1000000))
+        expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+        save_otp_entry(email, otp, expires_at, channel=channel)
+
+        try:
+            if channel == 'sms':
+                if 'phone' not in user or not user['phone']:
+                    flash('SMS channel requires a phone number in your profile.', 'error')
+                    return redirect(url_for('forgot_password'))
+                send_sms_otp(user['phone'], otp)
+                method_msg = 'SMS'
+            else:
+                send_reset_email(email, otp)
+                method_msg = 'email'
+
+            flash(f'OTP sent via {method_msg}. Please check spam/junk if using email.', 'success')
+            return redirect(url_for('verify_otp'))
+        except Exception as ex:
+            app.logger.error(f'OTP send failure: {ex}')
+            flash('Unable to send OTP right now. Please try again after a minute.', 'error')
+            # For debugging local development only (remove in production):
+            flash(f'OTP (debug): {otp}', 'info')
+            return redirect(url_for('verify_otp'))
+
+    return render_template('forgot_password.html', user=current_user())
 
 @app.route('/verify-otp', methods=['GET', 'POST'])
 def verify_otp():
     email = session.get('reset_email')
-    otp = session.get('reset_otp')
-    otp_expires = session.get('reset_otp_expires')
-
-    if not email or not otp or not otp_expires:
+    if not email:
         flash('No active password reset request. Please start again.', 'error')
         return redirect(url_for('forgot_password'))
 
-    if request.method == 'POST':
-        entered_otp = request.form.get('otp', '').strip()
-        if entered_otp != otp:
-            flash('Incorrect OTP. Please try again.', 'error')
-            return render_template('verify_otp.html', user=current_user())
+    entry = get_otp_entry(email)
+    if not entry:
+        flash('No OTP request found. Please start again.', 'error')
+        return redirect(url_for('forgot_password'))
 
-        if datetime.datetime.now() > datetime.datetime.fromisoformat(otp_expires):
-            flash('OTP has expired. Please request a new one.', 'error')
+    now = datetime.datetime.now()
+
+    if entry['lockout_until']:
+        lockout_until = datetime.datetime.fromisoformat(entry['lockout_until'])
+        if now < lockout_until:
+            flash('Too many incorrect attempts. Try again after 15 minutes.', 'error')
             return redirect(url_for('forgot_password'))
 
-        reset_token = secrets.token_urlsafe(32)
-        session['reset_token'] = reset_token
-        session['reset_expires'] = (datetime.datetime.now() + datetime.timedelta(minutes=15)).isoformat()
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp', '').strip()
 
-        session.pop('reset_otp', None)
-        session.pop('reset_otp_expires', None)
+        if now > datetime.datetime.fromisoformat(entry['expires_at']):
+            flash('OTP has expired. Please request a new one.', 'error')
+            delete_otp_entry(email)
+            return redirect(url_for('forgot_password'))
+
+        if entered_otp != entry['otp']:
+            increment_otp_attempts(email)
+            attempts_left = max(0, 5 - (entry['attempts'] + 1))
+            flash(f'Incorrect OTP. {attempts_left} attempt(s) left.', 'error')
+            return render_template('verify_otp.html', user=current_user())
+
+        # Correct OTP
+        mark_otp_verified(email)
+        session['otp_verified_email'] = email
+        session['reset_token'] = secrets.token_urlsafe(32)
+        session['reset_expires'] = (now + datetime.timedelta(minutes=15)).isoformat()
+
+        # optional 2FA via security question if configured
+        users = load_users()
+        user = users.get(email)
+        if user and user.get('security_question'):
+            session['reset_step'] = 'security_question'
+            flash('OTP verified. Please answer your security question to continue.', 'success')
+            return redirect(url_for('verify_security_question'))
 
         flash('OTP verified. Please set a new password now.', 'success')
-        return redirect(url_for('reset_password', token=reset_token))
+        return redirect(url_for('reset_password', token=session['reset_token']))
 
     return render_template('verify_otp.html', user=current_user())
 
@@ -258,6 +398,7 @@ def register():
             'name': name,
             'email': email,
             'password': generate_password_hash(password),
+            'phone': request.form.get('phone', '').strip(),
             'security_question': security_question,
             'security_answer': security_answer.lower()  # Store in lowercase for case-insensitive comparison
         }
