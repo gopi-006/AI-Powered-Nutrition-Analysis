@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Image Analysis</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li><a href="/profile">Profile</a></li>
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li class="page-selected"><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <main id="home-main">
+        <h3>Login</h3>
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <p><a href="/forgot-password">Forgot Password?</a></p>
+        <p>Not a user? <a href="/register">Register here</a></p>
+    </main>
+</body>
+</html>

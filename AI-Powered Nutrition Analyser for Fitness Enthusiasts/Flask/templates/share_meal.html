@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share Meal - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .share-container { max-width: 600px; margin: 0 auto; }
+        .share-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .share-card h2 { color: #007bff; margin-top: 0; }
+        .food-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .food-name { font-size: 2em; font-weight: bold; }
+        .food-emoji { font-size: 3em; margin: 10px 0; }
+        .visibility-options {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .visibility-options h4 { margin-top: 0; }
+        .radio-group {
+            margin: 15px 0;
+        }
+        .radio-group input[type="radio"] {
+            margin-right: 10px;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        .radio-label:hover { border-color: #007bff; }
+        .radio-label input:checked ~ .radio-text { font-weight: bold; }
+        .radio-text {
+            flex: 1;
+        }
+        .visibility-icon { font-size: 1.5em; margin-right: 15px; }
+        .description { font-size: 0.9em; color: #666; margin-left: 35px; }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .btn-primary {
+            background: #28a745;
+            color: white;
+        }
+        .btn-primary:hover { background: #218838; }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background: #5a6268; }
+        .benefit-list {
+            background: #e8f5e9;
+            padding: 20px;
+            border-left: 4px solid #28a745;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .benefit-list h4 { margin-top: 0; color: #2e7d32; }
+        .benefit-list ul { margin: 10px 0; padding-left: 20px; }
+        .benefit-list li { margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Share Meal</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="/social">Social</a></li>
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <main id="home-main">
+        <div class="share-container">
+            <div class="share-card">
+                <h2>🎉 Share Your Meal Discovery</h2>
+                
+                <div class="food-display">
+                    <div class="food-emoji">🍎</div>
+                    <div class="food-name">{{ food_name }}</div>
+                    <p style="margin: 15px 0 0 0; opacity: 0.9;">Sharing great nutrition with your community!</p>
+                </div>
+
+                <div class="benefit-list">
+                    <h4>🌟 Why Share?</h4>
+                    <ul>
+                        <li>Help others discover healthy foods</li>
+                        <li>Get feedback and likes from the community</li>
+                        <li>Build your nutrition portfolio</li>
+                        <li>Connect with people on similar health journeys</li>
+                    </ul>
+                </div>
+
+                <form method="post" action="/share-meal/{{ food_name }}">
+                    <div class="visibility-options">
+                        <h4>🔓 Who can see this?</h4>
+                        
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <span class="visibility-icon">🌍</span>
+                                <input type="radio" name="visibility" value="public" checked>
+                                <div class="radio-text">
+                                    <strong>Public</strong>
+                                    <p class="description">Everyone can see and like your meal</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <span class="visibility-icon">👥</span>
+                                <input type="radio" name="visibility" value="friends">
+                                <div class="radio-text">
+                                    <strong>Friends Only</strong>
+                                    <p class="description">Only your followers can see this</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <span class="visibility-icon">🔒</span>
+                                <input type="radio" name="visibility" value="private">
+                                <div class="radio-text">
+                                    <strong>Private</strong>
+                                    <p class="description">Only you can see this (not shared)</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">✅ Share Now</button>
+                        <a href="/profile" class="btn btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">← Back to Profile</a>
+                    </div>
+                </form>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid #007bff;">
+                    <h4 style="margin-top: 0;">💡 Sharing Tips</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Public meals get more likes and visibility</li>
+                        <li>Add detailed descriptions to help others understand nutrition value</li>
+                        <li>Check out the community feed to see what others are sharing</li>
+                        <li>Follow users with similar health goals</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

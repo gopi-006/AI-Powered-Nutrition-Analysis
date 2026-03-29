@@ -1,0 +1,265 @@
+*{
+    box-sizing: border-box;
+    margin: 0; 
+    padding: 0;
+}
+:root{
+    --primary-color: lightgreen;
+    --primary-color-opacity: rgba(144, 238, 144, 0.8);
+}
+body{
+    background: url("../images/pexels-lukas-1410138.jpg") no-repeat center top/cover;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+ul{
+    list-style: none;
+}
+a{
+    text-decoration: none;
+}
+
+/* Classes */
+.page-selected{
+    background: var(--primary-color);
+    color: white;   
+}
+.page-selected a{
+    color: white;
+}
+.primary-button, .secondary-button{
+    padding: 0.8rem;
+    font-size: 1.2rem;
+    border: none;
+    color: white;
+    font-weight: 500;
+    border-radius: 5px; 
+}
+.primary-button{
+    background: var(--primary-color);
+}
+.secondary-button{
+    background: rgb(50, 50, 208);
+}
+.primary-button:hover, .secondary-button:hover{
+    cursor: pointer;
+}
+
+/* Nav bar */
+nav{
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    background: rgba(243, 243, 243, 0.8);
+}
+nav > h2{
+    font-size: 2.5rem;
+    font-weight: 500;
+}
+nav > ul{
+    display: flex;
+}
+nav > ul > li{
+    padding: 2rem;
+    font-size: 1.3rem;
+    transition: 0.25s;
+}
+nav > ul > li:hover{
+    background: var(--primary-color-opacity);
+}
+nav > ul > li:hover > a{
+    color: white;
+}
+nav > ul > li > a{
+    color: black;
+    transition: 0.25s;
+}
+
+/* Home Page */
+#home-main{
+    background: var(--primary-color-opacity);
+    margin: 23rem auto;
+    width: 70rem;
+    padding: 2rem;
+    font-size: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Classify Page */
+#classify-main{
+    background: none;
+    width: 50rem; 
+    margin: 13rem auto;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-gap: 3rem;
+}
+#classify-main h3{
+    margin-bottom: 2rem;
+}
+#classify-main .secondary-button{
+    margin-top: 2rem;
+}
+#classify-main > div, #output{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#output h3{
+    margin-bottom: 4rem;
+}
+#output > p{
+    text-decoration: underline;
+    display: none;
+}
+#classify-main > div p{
+    text-align: center;
+    overflow-wrap: break-word;
+    max-width: 50rem;
+    font-size: 1.3rem;
+    font-weight: 500; 
+    margin-top: 2rem;
+}
+#output-wrapper{
+    background: rgba(243, 243, 243, 0.7);
+    margin-top: 2rem;
+    padding: 2rem;
+    border-radius: 10px;
+    display: none;
+}
+#output-wrapper > p:first-child{
+    margin-top: none;
+}
+#output-wrapper > p:last-child{
+    margin-top: 4rem;
+}
+
+/* Form Styles */
+form {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(144, 238, 144, 0.2);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    background: rgba(144, 238, 144, 0.1);
+    border-radius: 5px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 0.5rem;
+    transform: scale(1.2);
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background: #32cd32;
+}
+
+button[type="submit"]:active {
+    transform: translateY(1px);
+}
+
+/* Form Links */
+form + p {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+form + p a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+form + p a:hover {
+    text-decoration: underline;
+}
+
+/* Flash Messages */
+.flash-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 400px;
+}
+
+.flash {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.flash.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}

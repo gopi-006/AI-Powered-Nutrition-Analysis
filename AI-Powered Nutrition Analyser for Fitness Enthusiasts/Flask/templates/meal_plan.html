@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Plan - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .meal-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .meal-card h4 {
+            margin-top: 0;
+            font-size: 1.5em;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+        .meal-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .meal-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .meal-card li:before {
+            content: "🍽️ ";
+            margin-right: 10px;
+        }
+        .meal-card li:last-child {
+            border-bottom: none;
+        }
+        .calorie-info {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .calorie-info p {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        .condition-alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px 10px 0;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-back {
+            background: #6c757d;
+        }
+        .btn-back:hover {
+            background: #5a6268;
+        }
+        .bmi-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            background: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Meal Plan</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li><a href="/profile">Profile</a></li>
+            <li class="page-selected">Meal Plan</li>
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <main id="home-main">
+        <h3>🍽️ Personalized Meal Plan</h3>
+
+        {% if condition %}
+        <div class="condition-alert">
+            <strong>📋 Your Health Profile:</strong> {{ condition }} | <span class="bmi-badge">BMI: {{ bmi }}</span>
+        </div>
+        {% endif %}
+
+        <div class="calorie-info">
+            <p><strong>🎯 Daily Calorie Target:</strong> <span style="font-size: 1.3em; color: #dc3545;">{{ daily_target }} calories</span></p>
+            <p><small>This is based on your BMI, weight, and moderate activity level. Adjust the activity level in your profile for a more personalized target.</small></p>
+        </div>
+
+        <div class="meal-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <h4>🌅 Breakfast Options</h4>
+            <ul>
+                {% for meal in meals.breakfast %}
+                <li>{{ meal }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="meal-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <h4>🥗 Lunch Options</h4>
+            <ul>
+                {% for meal in meals.lunch %}
+                <li>{{ meal }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="meal-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <h4>🍖 Dinner Options</h4>
+            <ul>
+                {% for meal in meals.dinner %}
+                <li>{{ meal }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="meal-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <h4>🥜 Snack Options</h4>
+            <ul>
+                {% for meal in meals.snacks %}
+                <li>{{ meal }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border-left: 4px solid #28a745;">
+            <h4>💡 Tips for Success</h4>
+            <ul>
+                <li><strong>Portion Control:</strong> Use your daily calorie target as a guide, not a strict limit.</li>
+                <li><strong>Variety:</strong> Mix and match meals from different categories to avoid boredom.</li>
+                <li><strong>Hydration:</strong> Drink at least 2-3 liters of water daily.</li>
+                <li><strong>Timing:</strong> Space meals 3-4 hours apart for optimal digestion.</li>
+                <li><strong>Track Progress:</strong> Use the classify feature to log what you eat and monitor your intake.</li>
+                {% if 'diabetes' in condition.lower() %}
+                <li><strong>For Diabetes:</strong> Avoid sudden spikes in blood sugar by pairing carbs with protein/fiber.</li>
+                {% endif %}
+                {% if 'hypertension' in condition.lower() or 'blood pressure' in condition.lower() %}
+                <li><strong>For Hypertension:</strong> Reduce sodium intake and increase potassium-rich foods (bananas, spinach).</li>
+                {% endif %}
+                {% if 'pcos' in condition.lower() %}
+                <li><strong>For PCOS:</strong> Focus on low-glycemic foods and regular exercise for better hormone balance.</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div style="margin: 20px 0; padding: 20px; background: #f0f8ff; border-radius: 8px;">
+            <h4>📊 Next Steps</h4>
+            <p>
+                <a href="/profile" class="btn">Back to Profile</a>
+                <a href="/image" class="btn btn-back">Start Classifying Food</a>
+                <a href="/export-pdf" class="btn btn-back">Export PDF Report</a>
+            </p>
+        </div>
+
+        <div style="margin-top: 30px; padding: 15px; background: #fff9e6; border-radius: 8px; text-align: center;">
+            <p><small>📝 <strong>Note:</strong> This meal plan is personalized based on your health condition and BMI. Consult with a healthcare provider for medical nutrition therapy.</small></p>
+        </div>
+    </main>
+</body>
+</html>

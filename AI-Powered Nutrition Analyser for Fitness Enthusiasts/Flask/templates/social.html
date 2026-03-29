@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Feed - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .social-container { max-width: 800px; margin: 0 auto; }
+        .feed-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .feed-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .user-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .user-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name { font-weight: bold; color: #333; }
+        .user-email { font-size: 0.9em; color: #666; }
+        .meal-content {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        .meal-name { font-size: 1.3em; font-weight: bold; color: #007bff; }
+        .meal-nutrition {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .nutri-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .nutri-label { font-size: 0.85em; color: #666; }
+        .nutri-value { font-size: 1.2em; font-weight: bold; color: #333; }
+        .meal-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            color: #888;
+            font-size: 0.9em;
+        }
+        .meal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn-like { background: #dc3545; }
+        .btn-like:hover { background: #c82333; }
+        .btn-follow { background: #28a745; }
+        .btn-follow:hover { background: #218838; }
+        .like-count {
+            display: inline-block;
+            margin-left: 8px;
+            background: #f0f0f0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        .empty-feed {
+            text-align: center;
+            padding: 40px 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            color: #666;
+        }
+        .empty-feed p { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Social Feed</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li><a href="/profile">Profile</a></li>
+            <li class="page-selected"><a href="/social">Social</a></li>
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <main id="home-main">
+        <h3>🌍 Community Nutrition Feed</h3>
+        <p style="text-align: center; color: #666;">See what foods your community is classifying & sharing their nutrition journey!</p>
+
+        <div class="social-container">
+            {% if feed %}
+                {% for item in feed %}
+                <div class="feed-card">
+                    <div class="user-header">
+                        <div class="user-avatar">{{ item.user_name[0].upper() }}</div>
+                        <div class="user-info">
+                            <div class="user-name">{{ item.user_name }}</div>
+                            <div class="user-email">{{ item.user_email }}</div>
+                        </div>
+                        <button class="btn btn-follow" onclick="followUser('{{ item.user_email }}')">👥 Follow</button>
+                    </div>
+
+                    <div class="meal-content">
+                        <div class="meal-name">🍽️ {{ item.meal.food }}</div>
+                        
+                        {% if item.meal.nutrition %}
+                        <div class="meal-nutrition">
+                            {% if item.meal.nutrition.calories %}
+                            <div class="nutri-item">
+                                <div class="nutri-label">Calories</div>
+                                <div class="nutri-value">{{ item.meal.nutrition.calories }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if item.meal.nutrition.carbohydrates_total_g %}
+                            <div class="nutri-item">
+                                <div class="nutri-label">Carbs (g)</div>
+                                <div class="nutri-value">{{ item.meal.nutrition.carbohydrates_total_g }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if item.meal.nutrition.fiber_g %}
+                            <div class="nutri-item">
+                                <div class="nutri-label">Fiber (g)</div>
+                                <div class="nutri-value">{{ item.meal.nutrition.fiber_g }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if item.meal.nutrition.potassium_mg %}
+                            <div class="nutri-item">
+                                <div class="nutri-label">Potassium (mg)</div>
+                                <div class="nutri-value">{{ item.meal.nutrition.potassium_mg }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="meal-meta">
+                        <span>📅 {{ item.meal.timestamp }}</span>
+                        <button class="btn btn-like" onclick="likeMeal('{{ item.meal.id }}')">❤️ Like<span class="like-count" id="likes-{{ item.meal.id }}">{{ item.meal.likes }}</span></button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="empty-feed">
+                <h4>📭 No shared meals yet!</h4>
+                <p>Be the first to share your nutrition journey.</p>
+                <p><a href="/profile" style="color: #007bff; text-decoration: underline;">Classify a food and share it →</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+        function likeMeal(mealId) {
+            fetch(`/like-meal/${mealId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`likes-${mealId}`).innerText = data.likes;
+                    alert('❤️ You liked this meal!');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
+
+        function followUser(userEmail) {
+            fetch(`/follow/${userEmail}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
+    </script>
+</body>
+</html>

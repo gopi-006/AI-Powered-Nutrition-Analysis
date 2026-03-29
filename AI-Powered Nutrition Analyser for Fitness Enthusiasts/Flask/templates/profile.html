@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .section-card { background: #f9f9f9; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .chart-container { position: relative; height: 300px; margin: 20px 0; }
+        .action-buttons { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+        th { background: #007bff; color: white; }
+        tr:nth-child(even) { background: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Image Analysis</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li class="page-selected"><a href="/profile">Profile</a></li>
+            <li><a href="/social">👥 Social</a></li>
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <main id="home-main">
+        <h3>User Profile</h3>
+        <form action="/profile" method="post">
+            <label for="condition">Health condition (what you suffer from):</label>
+            <input type="text" id="condition" name="condition" value="{{ profile.condition if profile else '' }}" placeholder="e.g., diabetes, hypertension" required>
+
+            <label for="target_foods">Recommended foods to take:</label>
+            <input type="text" id="target_foods" name="target_foods" value="{{ profile.target_foods if profile else '' }}" placeholder="e.g., fruits, lean protein" required>
+
+            <label for="height_cm">Height (cm):</label>
+            <input type="number" step="0.1" id="height_cm" name="height_cm" value="{{ profile.height_cm if profile and profile.height_cm is not none else '' }}" required>
+
+            <label for="weight_kg">Weight (kg):</label>
+            <input type="number" step="0.1" id="weight_kg" name="weight_kg" value="{{ profile.weight_kg if profile and profile.weight_kg is not none else '' }}" required>
+
+            <button type="submit">Save Profile</button>
+        </form>
+
+        {% if profile and profile.bmi %}
+        <div class="section-card">
+            <h4>📊 BMI Results</h4>
+            <p><strong>BMI:</strong> {{ profile.bmi }}</p>
+            <p><strong>Category:</strong> 
+                <span style="padding: 5px 10px; border-radius: 5px; 
+                    {% if profile.bmi < 18.5 %}background: #ffc107;{% elif profile.bmi < 25 %}background: #28a745;{% elif profile.bmi < 30 %}background: #ff9800;{% else %}background: #dc3545;{% endif %}
+                    color: white;">
+                    {{ profile.bmi_category }}
+                </span>
+            </p>
+            <p><strong>Recommendation:</strong> {{ profile.recommendation }}</p>
+            <p><strong>Note:</strong> {{ profile.note }}</p>
+        </div>
+
+        <div class="section-card">
+            <h4>📈 Daily Calorie Target</h4>
+            <p id="calorie-target" style="font-size: 1.5em; color: #007bff; font-weight: bold;">Loading...</p>
+            <label for="activity">Select Activity Level:</label>
+            <select id="activity" style="padding: 8px; margin-top: 10px;">
+                <option value="sedentary">Sedentary (little exercise)</option>
+                <option value="light" selected>Light (1-3 days/week)</option>
+                <option value="moderate">Moderate (3-5 days/week)</option>
+                <option value="active">Active (6-7 days/week)</option>
+                <option value="very active">Very Active (2x per day)</option>
+            </select>
+        </div>
+
+        <div class="section-card">
+            <h4>📅 Weekly Nutrition Trends</h4>
+            <div class="chart-container">
+                <canvas id="nutritionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <a href="/meal-plan" class="btn btn-success">🍽️ View Meal Plan</a>
+            <a href="/export-pdf" class="btn btn-danger">📄 Export PDF Report</a>
+            <a href="/image" class="btn">📸 Back to Classify</a>
+        </div>
+        {% endif %}
+
+        {% if profile and profile.food_classifications %}
+        <div class="section-card">
+            <h4>📊 Your Food Classifications History</h4>
+            <p><strong>Total Foods Classified:</strong> {{ profile.food_classifications|length }}</p>
+            
+            {% set total_calories = 0 %}
+            {% for classification in profile.food_classifications %}
+                {% if classification.nutrition and classification.nutrition.calories %}
+                    {% set total_calories = total_calories + classification.nutrition.calories %}
+                {% endif %}
+            {% endfor %}
+            <p><strong>Total Calories Logged:</strong> {{ total_calories }} cal</p>
+
+            <h5>Recent Classifications (Latest 10)</h5>
+            <table>
+                <tr>
+                    <th>Food</th>
+                    <th>Date & Time</th>
+                    <th>Calories</th>
+                    <th>Carbs (g)</th>
+                    <th>Fiber (g)</th>
+                    <th>Action</th>
+                </tr>
+                {% for classification in profile.food_classifications|reverse|list|first(10) %}
+                <tr>
+                    <td>{{ classification.food }}</td>
+                    <td>{{ classification.timestamp }}</td>
+                    <td>{{ classification.nutrition.calories if classification.nutrition else 'N/A' }}</td>
+                    <td>{{ classification.nutrition.carbohydrates_total_g if classification.nutrition else 'N/A' }}</td>
+                    <td>{{ classification.nutrition.fiber_g if classification.nutrition else 'N/A' }}</td>
+                    <td>
+                        <a href="/share-meal/{{ classification.food }}" style="color: #28a745; text-decoration: none; font-weight: bold;">📤 Share</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="section-card">
+            <h4>💡 Project Features (All Implemented ✅)</h4>
+            <ul>
+                <li>✅ Track food classifications with timestamps</li>
+                <li>✅ Display BMI status with health indicators</li>
+                <li>✅ Personalized food recommendations based on condition & BMI</li>
+                <li>✅ Weekly nutrition charts and trends</li>
+                <li>✅ Meal planning based on your BMI and health goals</li>
+                <li>✅ Calorie counter with daily targets & activity levels</li>
+                <li>✅ Export nutrition report as PDF</li>
+                <li>✅ <strong>Mobile app sync</strong> - Generate API token & sync data</li>
+                <li>✅ <strong>Social meal sharing</strong> - Share meals, follow users, like feeds</li>
+            </ul>
+            <div style="margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 5px; border-left: 4px solid #28a745;">
+                <strong>🚀 New Features:</strong>
+                <p><a href="/social" style="color: #28a745; text-decoration: underline;">👥 Visit Community Feed →</a></p>
+                <p><a href="/api/generate-token" style="color: #28a745; text-decoration: underline;">📱 Generate Mobile API Token →</a></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Load weekly nutrition data and render chart
+        fetch('/weekly-nutrition')
+            .then(res => res.json())
+            .then(data => {
+                const ctx = document.getElementById('nutritionChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Calories',
+                                data: data.calories,
+                                borderColor: '#ff6b6b',
+                                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            },
+                            {
+                                label: 'Carbs (g)',
+                                data: data.carbs,
+                                borderColor: '#4ecdc4',
+                                backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true, position: 'top' } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            })
+            .catch(err => console.error('Error loading chart:', err));
+
+        // Calculate and display calorie target based on activity level
+        const activitySelect = document.getElementById('activity');
+        const calorieTarget = document.getElementById('calorie-target');
+
+        function updateCalories() {
+            const bmi = {{ profile.bmi if profile and profile.bmi else 'null' }};
+            const weight = {{ profile.weight_kg if profile and profile.weight_kg else 'null' }};
+            const height = {{ profile.height_cm if profile and profile.height_cm else 'null' }};
+            const activity = activitySelect.value;
+
+            if (!bmi || !weight || !height) {
+                calorieTarget.textContent = 'Please set your profile data first';
+                return;
+            }
+
+            // Simple calorie calculation
+            let baseCalories = weight * 25;
+            if (bmi < 18.5) baseCalories *= 1.1;
+            else if (bmi >= 30) baseCalories *= 0.9;
+
+            const multipliers = {
+                'sedentary': 1.2,
+                'light': 1.375,
+                'moderate': 1.55,
+                'active': 1.725,
+                'very active': 1.9
+            };
+
+            const dailyTarget = Math.round(baseCalories * multipliers[activity]);
+            calorieTarget.textContent = `${dailyTarget} calories/day`;
+        }
+
+        activitySelect.addEventListener('change', updateCalories);
+        updateCalories();
+    </script>
+</body>
+</html>

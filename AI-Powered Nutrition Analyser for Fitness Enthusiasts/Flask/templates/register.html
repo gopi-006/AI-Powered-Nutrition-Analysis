@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Nutrition Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <h2> <span>Nutrition</span> Image Analysis</h2>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/image">Classify</a></li>
+            {% if user %}
+            <li>Welcome {{ user.name }}</li>
+            <li><a href="/logout">Logout</a></li>
+            {% else %}
+            <li><a href="/login">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <main id="home-main">
+        <h3>Register</h3>
+        <form action="/register" method="post">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="example-email" onclick="toggleExampleEmail()">
+                    <label for="example-email">Use example email: user@example.com</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password:</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>
+            <button type="submit">Register</button>
+        </form>
+    </main>
+    <script>
+        function toggleExampleEmail() {
+            const checkbox = document.getElementById('example-email');
+            const emailInput = document.getElementById('email');
+            
+            if (checkbox.checked) {
+                emailInput.value = 'user@example.com';
+                emailInput.readOnly = true;
+            } else {
+                emailInput.value = '';
+                emailInput.readOnly = false;
+            }
+        }
+    </script>
+</body>
+</html>
