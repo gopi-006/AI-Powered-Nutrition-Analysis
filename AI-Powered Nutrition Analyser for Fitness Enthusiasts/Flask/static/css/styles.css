@@ -219,21 +219,33 @@ button[type="submit"]:active {
     transform: translateY(1px);
 }
 
-/* Form Links */
-form + p {
+/* Forgot Password Link */
+.forgot-password-container {
     text-align: center;
-    margin-top: 1rem;
-    font-size: 0.9rem;
+    margin: 1rem 0;
+    padding: 0.5rem;
 }
 
-form + p a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-weight: 500;
+.forgot-password-link {
+    color: var(--primary-color) !important;
+    text-decoration: underline !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1rem !important;
+    display: inline-block !important;
+    border: 2px solid transparent !important;
+    border-radius: 5px !important;
+    transition: all 0.3s ease !important;
+    background: rgba(144, 238, 144, 0.1) !important;
 }
 
-form + p a:hover {
-    text-decoration: underline;
+.forgot-password-link:hover {
+    background: var(--primary-color) !important;
+    color: white !important;
+    text-decoration: none !important;
+    border-color: var(--primary-color) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Flash Messages */

@@ -3,6 +3,8 @@
     "name": "GOPI S",
     "email": "gopisaravanan264@gamil.com",
     "password": "scrypt:32768:8:1$kSoftC5GaavawsA8$1ac04a9850235c01063436b0f809f9261422e14a8105f908c62b2498cad476c73d085e29234d5b62db3427279c74f4db6c6b5d4ac86d80b566019f6d8f4b1959",
+    "security_question": "What is your favorite fruit?",
+    "security_answer": "apple",
     "profile": {
       "condition": "anger",
       "target_foods": "apple",
@@ -18,6 +20,8 @@
     "name": "GOPI S",
     "email": "gopisaravanan264@gmail.com",
     "password": "scrypt:32768:8:1$ODjkAEWjJJEXQhFC$1e1053ae2b5bd80a16faba193c00ce6302bc8da4a3492531ec1c80cd929490a959750175062e37fdd0942416dfee22226cc88c2988f637808666673528c132c6",
+    "security_question": "What is your favorite fruit?",
+    "security_answer": "apple",
     "profile": {
       "condition": "hypertension",
       "target_foods": "no idea",
@@ -34,6 +38,8 @@
     "name": "velan",
     "email": "1234@gmail.com",
     "password": "scrypt:32768:8:1$ApFAzmfh4BLufWxO$8a4179b9081942d5d612741e0f30ea90e560becc8f82cd8265d264b56e42ab88f80a8f83d9f4982ab16e1f1128ed8f6aa0cf89465b735c0447d95bbbb0a926c2",
+    "security_question": "What is your favorite color?",
+    "security_answer": "blue",
     "profile": {
       "condition": "anger",
       "target_foods": "no idea",

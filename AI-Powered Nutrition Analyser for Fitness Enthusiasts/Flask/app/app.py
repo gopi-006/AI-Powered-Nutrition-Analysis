@@ -80,23 +80,97 @@ def login():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
-        
+
         if not email:
             flash('Please enter your email address.', 'error')
             return render_template('forgot_password.html', user=current_user())
-        
+
         users = load_users()
-        if email in users:
-            # In a real application, you would send an email with a reset link
-            # For this demo, we'll just show a success message
-            flash('Password reset instructions have been sent to your email address.', 'success')
-            return redirect(url_for('login'))
+        if email in users and 'security_question' in users[email]:
+            # Store email in session for security question verification
+            session['reset_email'] = email
+            session['reset_step'] = 'security_question'
+            flash('Please answer your security question to continue.', 'info')
+            return redirect(url_for('verify_security_question'))
         else:
             # Don't reveal if email exists or not for security reasons
-            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+            flash('If an account with that email exists, please check that security questions are set up.', 'info')
             return redirect(url_for('login'))
     
     return render_template('forgot_password.html', user=current_user())
+
+
+@app.route('/verify-security-question', methods=['GET', 'POST'])
+def verify_security_question():
+    email = session.get('reset_email')
+    if not email or session.get('reset_step') != 'security_question':
+        flash('Invalid reset session. Please start over.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    users = load_users()
+    if email not in users:
+        flash('User not found.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    user = users[email]
+    if 'security_question' not in user:
+        flash('Security question not set up for this account.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        answer = request.form.get('security_answer', '').strip().lower()
+        correct_answer = user.get('security_answer', '').strip().lower()
+        
+        if answer == correct_answer:
+            # Generate reset token and proceed to password reset
+            reset_token = secrets.token_urlsafe(32)
+            session['reset_token'] = reset_token
+            session['reset_expires'] = datetime.datetime.now() + datetime.timedelta(minutes=15)
+            session['reset_step'] = 'password_reset'
+            
+            flash('Security question verified. You can now reset your password.', 'success')
+            return redirect(url_for('reset_password', token=reset_token))
+        else:
+            flash('Incorrect answer to security question.', 'error')
+            return render_template('verify_security_question.html', 
+                                 security_question=user['security_question'], 
+                                 user=current_user())
+    
+    return render_template('verify_security_question.html', 
+                         security_question=user['security_question'], 
+                         user=current_user())
+    
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        if not password or len(password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
+            return render_template('reset_password.html', token=token)
+        
+        if password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return render_template('reset_password.html', token=token)
+        
+        # Update password
+        users = load_users()
+        email = session.get('reset_email')
+        if email and email in users:
+            users[email]['password'] = generate_password_hash(password)
+            save_users(users)
+            
+            # Clear reset session
+            session.pop('reset_token', None)
+            session.pop('reset_email', None)
+            session.pop('reset_expires', None)
+            
+            flash('Password has been reset successfully. You can now log in.', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('User not found.', 'error')
+            return redirect(url_for('forgot_password'))
+    
+    return render_template('reset_password.html', token=token)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -106,13 +180,19 @@ def register():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        security_question = request.form.get('security_question', '').strip()
+        security_answer = request.form.get('security_answer', '').strip()
         
-        if not name or not email or not password or not confirm_password:
+        if not name or not email or not password or not confirm_password or not security_question or not security_answer:
             flash('All fields are required.', 'error')
             return render_template('register.html', user=current_user())
         
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
+            return render_template('register.html', user=current_user())
+        
+        if len(security_answer) < 2:
+            flash('Security answer must be at least 2 characters long.', 'error')
             return render_template('register.html', user=current_user())
 
         users = load_users()
@@ -123,7 +203,9 @@ def register():
         users[email] = {
             'name': name,
             'email': email,
-            'password': generate_password_hash(password)
+            'password': generate_password_hash(password),
+            'security_question': security_question,
+            'security_answer': security_answer.lower()  # Store in lowercase for case-insensitive comparison
         }
         save_users(users)
         session['email'] = email
