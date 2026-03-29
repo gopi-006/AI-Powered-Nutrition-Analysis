@@ -1,0 +1,13 @@
+site_name: AI Nutrition Analyzer
+site_description: AI-powered food nutrition analysis system
+site_author: Your Name
+
+theme:
+  name: material
+
+nav:
+  - Home: index.md
+  - Setup: setup.md
+  - Usage: usage.md
+  - Project Structure: structure.md
+  - API: api.md
