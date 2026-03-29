@@ -261,12 +261,14 @@ def forgot_password():
                 send_reset_email(email, otp)
                 method_msg = 'email'
 
+            session['reset_email'] = email  # Set the email in session for OTP verification
             flash(f'OTP sent via {method_msg}. Please check spam/junk if using email.', 'success')
             return redirect(url_for('verify_otp'))
         except Exception as ex:
             app.logger.error(f'OTP send failure: {ex}')
             flash('Unable to send OTP right now. Please try again after a minute.', 'error')
             # For debugging local development only (remove in production):
+            session['reset_email'] = email  # Set session even for debug
             flash(f'OTP (debug): {otp}', 'info')
             return redirect(url_for('verify_otp'))
 
