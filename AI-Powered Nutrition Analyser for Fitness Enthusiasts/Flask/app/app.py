@@ -314,14 +314,6 @@ def verify_otp():
         session['reset_token'] = secrets.token_urlsafe(32)
         session['reset_expires'] = (now + datetime.timedelta(minutes=15)).isoformat()
 
-        # optional 2FA via security question if configured
-        users = load_users()
-        user = users.get(email)
-        if user and user.get('security_question'):
-            session['reset_step'] = 'security_question'
-            flash('OTP verified. Please answer your security question to continue.', 'success')
-            return redirect(url_for('verify_security_question'))
-
         flash('OTP verified. Please set a new password now.', 'success')
         return redirect(url_for('reset_password', token=session['reset_token']))
 
@@ -376,19 +368,13 @@ def register():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
-        security_question = request.form.get('security_question', '').strip()
-        security_answer = request.form.get('security_answer', '').strip()
         
-        if not name or not email or not password or not confirm_password or not security_question or not security_answer:
+        if not name or not email or not password or not confirm_password:
             flash('All fields are required.', 'error')
             return render_template('register.html', user=current_user())
         
         if password != confirm_password:
             flash('Passwords do not match.', 'error')
-            return render_template('register.html', user=current_user())
-        
-        if len(security_answer) < 2:
-            flash('Security answer must be at least 2 characters long.', 'error')
             return render_template('register.html', user=current_user())
 
         users = load_users()
@@ -400,9 +386,7 @@ def register():
             'name': name,
             'email': email,
             'password': generate_password_hash(password),
-            'phone': request.form.get('phone', '').strip(),
-            'security_question': security_question,
-            'security_answer': security_answer.lower()  # Store in lowercase for case-insensitive comparison
+            'phone': request.form.get('phone', '').strip()
         }
         save_users(users)
         session['email'] = email
