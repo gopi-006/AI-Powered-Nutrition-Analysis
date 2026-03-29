@@ -17,7 +17,7 @@
   "gopisaravanan264@gmail.com": {
     "name": "GOPI S",
     "email": "gopisaravanan264@gmail.com",
-    "password": "scrypt:32768:8:1$iQEoKoPIzk11lEmb$15deac4886a8aa1563cfe028b6df81605b9589d8af86e73364c27ce4cbc2a00b5aaecbf5e1cfaf59ffb70ab3a6c980b166c22a168deb2eb5a7265f9fa37a2652",
+    "password": "scrypt:32768:8:1$kuYuWWJiZQLddjUy$c12ebef5d18d97d4c07128e79a61921f40984f99e9547cca71d65c4f20053db08890fc0b24b22570c45cc96ec5a648c1efcec67d23077aca0806b14665b28788",
     "profile": {
       "condition": "hypertension",
       "target_foods": "no idea",
@@ -27,7 +27,21 @@
       "bmi_category": "Normal weight",
       "recommendation": "Low sodium diet, leafy greens, fruits, lean protein, minimal processed foods.",
       "note": "This profile data is stored with your user account and can help personalize your nutrition advice.",
-      "food_classifications": []
+      "food_classifications": [
+        {
+          "food": "APPLES",
+          "nutrition": {
+            "calories": 52,
+            "carbohydrates_total_g": 14,
+            "fat_total_g": 0.2,
+            "fiber_g": 2.4,
+            "sugar_g": 10,
+            "potassium_mg": 107,
+            "sodium_mg": 1
+          },
+          "timestamp": "2026-03-29 17:49:35"
+        }
+      ]
     }
   },
   "1234@gmail.com": {
